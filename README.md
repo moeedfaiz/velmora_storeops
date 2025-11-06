@@ -79,6 +79,61 @@ velmora_storeops/
   └─ README.md
 ```
 
+# Velmora StoreOps
+
+**AI-powered retail operations stack**: FastAPI API, Streamlit dashboard, LangGraph (Cohere) copilot with RAG over SOP docs, SQLite persistence, and Redis. Run locally or in prod with Docker Compose.
+
+## ✨ Features
+
+- **API (FastAPI)** for Customers, Products, Inventory, Orders, Analytics
+- **Chat Copilot** (LangGraph + Cohere) with intents:
+  - `order_status` — track an order by ID
+  - `stock_forecast` — forecast stock-out risk for a SKU over N days
+  - `inventory` — list in-stock/out-of-stock items
+  - `policy_q` — answer questions from SOP docs (RAG)
+- **RAG** over markdown/PDF SOPs (`/app/data/sops` → FAISS index at `/data/vectorstore`)
+- **Streamlit UI**: Orders / Customers / Inventory / Analytics / Chat
+- **Observability**: `/health`, `/info`, optional Prometheus metrics
+- **Batteries included**: SQLite DB, Redis, Dockerized for parity
+
+## 🧱 Stack
+
+- **Backend**: FastAPI (Uvicorn), SQLite, Redis
+- **AI**: LangGraph, LangChain, Cohere (chat + embeddings)
+- **RAG**: FAISS (local), optional Chroma
+- **UI**: Streamlit
+- **Infra**: Docker, Docker Compose
+
+## 🚀 Quick Start (Docker)
+
+1) Copy `.env.example` → `.env` and fill your keys:
+```env
+# LLM
+LLM_PROVIDER=cohere
+MODEL_NAME=command-a-03-2025
+EMBEDDINGS_BACKEND=cohere
+EMBED_MODEL=embed-english-v3.0
+COHERE_API_KEY=YOUR-KEY-HERE
+
+# Paths (inside containers)
+VECTOR_DIR=/data/vectorstore
+SOPS_DIR=/app/data/sops
+DB_PATH=/data/velmora.db
+
+# API
+API_HOST=0.0.0.0
+API_PORT=8000
+API_BASE=http://api:8000
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Observability (optional)
+PROMETHEUS_ENABLE=1
+SENTRY_DSN=
+SENTRY_TRACES=0.05
+
+
 ## Notes
 - Uses Cohere models via `langchain-cohere`. Swap providers in `app/api/server.py` easily.
 - For production: add auth to FastAPI, HTTPS, and move Chroma to a persistent volume.
