@@ -134,6 +134,22 @@ SENTRY_DSN=
 SENTRY_TRACES=0.05
 
 
+
+
+Development (without Docker)
+python -m venv .venv
+. .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
+pip install -r requirements-api.txt
+
+# env
+cp .env.example .env   # fill COHERE_API_KEY, paths, etc.
+
+# run API
+uvicorn app.api.server:app --host 0.0.0.0 --port 8000 --reload
+
+# run UI
+API_BASE=http://localhost:8000 python -m streamlit run app/ui_app.py
+
 ## Notes
 - Uses Cohere models via `langchain-cohere`. Swap providers in `app/api/server.py` easily.
 - For production: add auth to FastAPI, HTTPS, and move Chroma to a persistent volume.
