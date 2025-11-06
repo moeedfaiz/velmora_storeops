@@ -1,0 +1,30 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+requests==2.32.3
+prometheus-fastapi-instrumentator==7.0.0
+sentry-sdk==2.16.0
+redis==5.0.8
+pandas==2.2.3
+python-dateutil==2.9.0.post0
+# --- for ingest & FAISS vectorstore ---
+langchain-community==0.3.7
+langchain-text-splitters==0.3.2
+pypdf==5.0.1
+faiss-cpu==1.8.0.post1
+langchain-cohere==0.3.1
+cohere==5.9.4
+
+langgraph==0.2.*
+langchain-community>=0.3.0
+langchain-cohere>=0.3.0
+cohere>=5.9.0
+chromadb>=0.5.3
+faiss-cpu
+
+
+
+# If you’re using the optional RAG graph, include whatever you actually use:
+# langchain==0.2.16
+# langgraph==0.2.42
+# cohere==5.9.5

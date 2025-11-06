@@ -1,0 +1,31 @@
+# Python env & caches
+.venv
+venv
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.ipynb_checkpoints/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local data we mount via compose
+data/
+vectorstore/
+backups/

@@ -1,0 +1,26 @@
+# ---- API image ----
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on
+
+WORKDIR /app
+
+# system deps (optional but handy)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl tini && \
+    rm -rf /var/lib/apt/lists/*
+
+# install API requirements
+COPY requirements-api.txt /tmp/requirements-api.txt
+RUN pip install --upgrade pip && pip install -r /tmp/requirements-api.txt
+
+# copy app code (read-only bind from compose will still overlay at runtime)
+COPY . /app
+
+EXPOSE 8000
+ENTRYPOINT ["/usr/bin/tini","--"]
+CMD ["tini","--","uvicorn","app.api.server:app","--host","0.0.0.0","--port","8000"]
+

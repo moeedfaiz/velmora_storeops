@@ -1,0 +1,147 @@
+networks:
+  velmora_net:
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: .env
+    environment:
+      # explicit pass-throughs
+      PYTHONPATH: /app
+      DB_PATH: ${DB_PATH:-/data/velmora.db}
+      VECTOR_DIR: ${VECTOR_DIR:-/data/vectorstore}
+      SOPS_DIR: ${SOPS_DIR:-/app/data/sops}
+      LLM_PROVIDER: ${LLM_PROVIDER}
+      EMBEDDINGS_BACKEND: ${EMBEDDINGS_BACKEND}
+      MODEL_NAME: "command-a-03-2025"         # <-- pinned
+      EMBED_MODEL: "embed-english-v3.0"       # <-- pinned
+      COHERE_API_KEY: ${COHERE_API_KEY}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_TRACES: ${SENTRY_TRACES:-0.0}
+      PROMETHEUS_ENABLE: ${PROMETHEUS_ENABLE:-1}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/data
+      - ./:/app:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).status==200 else sys.exit(1)\" || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [velmora_net]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    env_file: .env
+    environment:
+      API_BASE: ${API_BASE:-http://api:8000}
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8501', timeout=5).status==200 else sys.exit(1)\" || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks: [velmora_net]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [velmora_net]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["python","-m","app.worker"]
+    env_file: .env
+    environment:
+      PYTHONPATH: /app
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      DB_PATH: ${DB_PATH:-/data/velmora.db}
+      VECTOR_DIR: ${VECTOR_DIR:-/data/vectorstore}
+      SOPS_DIR: ${SOPS_DIR:-/app/data/sops}
+      LLM_PROVIDER: ${LLM_PROVIDER}
+      EMBEDDINGS_BACKEND: ${EMBEDDINGS_BACKEND}
+      MODEL_NAME: "command-a-03-2025"         # <-- pinned
+      EMBED_MODEL: "embed-english-v3.0"       # <-- pinned
+      COHERE_API_KEY: ${COHERE_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/data
+      - ./:/app:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [velmora_net]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  backup:
+    image: alpine:3.19
+    env_file: .env
+    environment:
+      BACKUP_INTERVAL_SEC: ${BACKUP_INTERVAL_SEC:-3600}
+      BACKUP_RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-7}
+      TZ: ${TZ:-Asia/Karachi}
+    volumes:
+      - ./data:/data
+    entrypoint: ["/bin/sh","-lc"]
+    command: >
+      set -e;
+      apk add --no-cache tzdata >/dev/null;
+      mkdir -p /data/backup;
+      echo "Backup loop started. Interval=${BACKUP_INTERVAL_SEC}s, Retain=${BACKUP_RETAIN_DAYS}d";
+      while true; do
+        ts=$(date +%F_%H%M%S);
+        if [ -f /data/velmora.db ]; then
+          cp /data/velmora.db /data/backup/velmora_${ts}.db;
+          find /data/backup -type f -mtime +${BACKUP_RETAIN_DAYS} -delete || true;
+          echo "Backed up at $${ts}";
+        else
+          echo "WARNING: /data/velmora.db not found; skipping copy";
+        fi
+        sleep ${BACKUP_INTERVAL_SEC};
+      done
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes: {}
