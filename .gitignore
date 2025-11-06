@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+
+# Virtual env
+.venv/
+
+# OS
+.DS_Store
+
+# Local env + secrets
+.env
+.env.*.local
+
+# Vector index + local data
+/data/
+*/vectorstore/
+index.faiss
+index.pkl
+
+# Streamlit cache
+.streamlit/
+
+# VSCode
+.vscode/
